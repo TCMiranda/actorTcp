@@ -1,0 +1,19 @@
+{
+  "name": "actor-tcp",
+  "version": "0.0.1",
+  "description": "Tcp socket interface for event driven applications",
+  "main": "actorTcp.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+      "tcp",
+      "net",
+      "event",
+      "emitter",
+      "async"
+  ],
+  "author": "Tiago de Carvalho Miranda",
+  "license": "MIT",
+  "dependencies": {}
+}
