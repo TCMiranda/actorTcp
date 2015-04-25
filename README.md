@@ -1,6 +1,6 @@
-# Actor Socket
+# Actor TCP
 
-_Actor-socket_ is lightweight, independent, async, event based, websocket interface library, built with the "Websocket" module;
+_Actor-tcp_ is lightweight, independent, async, event based, tcp interface library
 
 ## Why
 
@@ -9,50 +9,43 @@ Binding on an event, maintains the worker scope, so they can continue to process
 
 ## How to Use It
 
-Actor Socket is single instance, so it listens and emits the same events all across your app.
+The Actor boudle is single instance, so it listens and emits the same events all across your app.
+Just require the "actor-emitter" library, then load "actor-tcp", to add the listeners
 
-    var emitter = require('actor-emitter'),
-        uuid    = require('node-uuid');
+   var config = require('./config'),
+   	   Mng = require('mongodb').MongoClient,
+       emitter = require('actor-emitter');
 
-    require('actor-socket')(emitter);
+    require('actor-tcp');
 
-    var worker = (function() {
+    var worker = function(err, db) {
 
-        var _id;
+        console.log('Worker connected to mongo: ' + config.paths.mongo);
 
-        var onAuthenticationRequested = function (data) {
+        var Answers = db.collection('answers');
 
-    	    _id = uuid();
-    	    data._id = _id;
-    	    data.appKey = 'myapp';
+        emitter.trigger('tcp:connect', '127.0.0.1:34440');
 
-            // send authentication request!
-    	    emitter.trigger('socket:send', data);
-        };
+        emitter.bind('tcp:open', function () {
+            console.log('Client connected \nStarting streaming');
+        });
 
-        var requestUserPublicProfile = function () {
+        emitter.bind('c3a:store', function (msg) {
 
-            var data = {
-                header: 'myapp',
-                action: 'user_get_public',
-                nick: 'mynick'
-            }
+            Answers.insert(msg, function(err, data) {});
+        });
+    };
 
-            emitter.trigger('socket.send', data);
-        }
+    Mng.connect(config.paths.mongo, worker);
 
-        emitter.bind('authentication:announce', onAuthenticationRequested);
-        emitter.bind('authentication:announce:200', requestUserPublicProfile);
-    }
+The emitter is bound to:
 
+    emitter.trigger('tcp:connect', {});
+    emitter.trigger('tcp:send', {});
 
-That example outputs something like this, assuming your server requests an authentication when connected
+Incomming messages will emmit:
 
-    <-  {"action":"announce","header":"authentication"}
-    ->  {"action":"announce","header":"authentication","_id":"77e5b21e-4494-481c-9591-621680bf0772","appKey":"myapp"}
-    <-  {"action":"announce","header":"authentication","__code__":200}
-    ->  {"header":"myapp","action":"user_get_public","nick":"mynick"}
-    <-  ...
+    emitter.bind('tcp:data', handler);
 
 Thats it.
 

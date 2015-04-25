@@ -1,96 +1,97 @@
 'use strict';
 
-module.exports = (function (emitter) {
+var net = require('net'),
+    emitter = require('actor-emitter');
 
-    var _client = null;
+var _client = null;
 
-    var tcpSend = function(msg) {
+var tcpSend = function(msg) {
 
-        _client.write(typeof msg == "string"
-                      ? msg : JSON.stringify(msg));
-    };
+    _client.write(typeof msg == "string"
+                  ? msg : JSON.stringify(msg));
+};
 
-    var onStringData = function(data) {
+var onStringData = function(data) {
 
-        let parsed = data.split('|');
+    let parsed = data.split('|');
 
-        try {
+    try {
 
-            parsed[1] = JSON.parse(parsed[1]);
+        parsed[1] = JSON.parse(parsed[1]);
 
-        } catch (e) { /* Not json */ }
+    } catch (e) { /* Not json */ }
 
-        emitter.trigger(parsed[0], parsed[1]);
+    emitter.trigger(parsed[0], parsed[1]);
 
-    };
+};
 
-    var onJSONData = function(parsed) {
+var onJSONData = function(parsed) {
 
-        let code = parsed.future || parsed.__code__ || parsed.code || '';
+    let code = parsed.future || parsed.__code__ || parsed.code || '';
 
-        emitter.trigger(parsed.future ||
-                        parsed.header + ':' +
-                        parsed.action + (code ? ':' + code : '' ));
+    emitter.trigger(parsed.future ||
+                    parsed.header + ':' +
+                    parsed.action + (code ? ':' + code : '' ));
 
-    };
+};
 
-    var onEachData = function(data) {
+var onEachData = function(data) {
 
-        try {
+    try {
 
-            let parsed = JSON.parse(data);
+        let parsed = JSON.parse(data);
 
-            emitter.next(onJSONData, parsed);
+        emitter.next(onJSONData, parsed);
 
-        } catch (e) {
+    } catch (e) {
 
-            emitter.next(onStringData, data);
-        }
+        emitter.next(onStringData, data);
+    }
 
-        emitter.trigger('tcp:data', data);
-    };
+    emitter.trigger('tcp:data', data);
+};
 
-    var tcpData = function(data) {
+var tcpData = function(data) {
 
-        data = data.toString();
+    data = data.toString();
 
-        data.split('\\').forEach(function (item) {
+    data.split('\\').forEach(function (item) {
 
-            if (item) emitter.next(onEachData, item);
-        });
-    };
+        if (item) emitter.next(onEachData, item);
+    });
+};
 
-    var tcpDisconnect = function() {
+var tcpDisconnect = function() {
 
 
-    };
+};
 
-    var doConnect = function(options) {
+var doConnect = function(options) {
 
-        _client = net.connect(options, emitter.trigger.bind(this, 'tcp:open'));
-        _client.on('data', tcpData);
-        _client.on('end', tcpDisconnect);
-    };
+    _client = net.connect(options, emitter.trigger.bind(this, 'tcp:open'));
+    _client.on('data', tcpData);
+    _client.on('end', tcpDisconnect);
+};
 
-    var parseConnect = function (url) {
+var parseConnect = function (url) {
 
-        let args = url.split(':');
+    let args = url.split(':');
 
-        emitter.next(doConnect.bind(this, {
-            host: args[0],
-            port: args[1]
-        }));
-    };
+    emitter.next(doConnect.bind(this, {
+        host: args[0],
+        port: args[1]
+    }));
+};
 
-    var tcpConnect = function (args) {
+var tcpConnect = function (args) {
 
-        emitter.next(
-            typeof args == "string"
-                ? parseConnect.bind(this, args)
-                : doConnect.bind(this, args));
-    };
+    emitter.next(
+        typeof args == "string"
+            ? parseConnect.bind(this, args)
+            : doConnect.bind(this, args));
+};
 
-    emitter.bind('tcp:connect', tcpConnect);
-    emitter.bind('tcp:send', tcpSend);
+emitter.bind('tcp:connect', tcpConnect);
+emitter.bind('tcp:send', tcpSend);
 
-})(emitter);
+module.exports = emitter;
